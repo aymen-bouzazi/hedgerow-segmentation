@@ -1,0 +1,259 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ennezat - crown shapes in 3D</title>
+<style>
+ html,body{margin:0;height:100%;background:#14140f;color:#e8e6df;font:14px/1.5 system-ui,sans-serif;overflow:hidden}
+ #c{position:absolute;inset:0}
+ #ui{position:absolute;top:0;left:0;padding:14px 16px;background:rgba(20,20,15,.9);border-right:1px solid #33322b;
+     border-bottom:1px solid #33322b;width:300px;max-height:100%;overflow:auto}
+ h1{font-size:15px;font-weight:500;margin:0 0 10px}
+ label{display:block;margin:10px 0 3px;font-size:12px;color:#a5a29a}
+ select,button{font:13px system-ui;background:#23231c;color:#e8e6df;border:1px solid #44443c;border-radius:5px;padding:5px 7px}
+ select{width:100%}
+ button{cursor:pointer;margin:2px 3px 2px 0}
+ button.on{background:#1D9E75;border-color:#1D9E75;color:#04342c}
+ table{border-collapse:collapse;margin-top:10px;font-size:12px;width:100%}
+ td{padding:2px 6px 2px 0;color:#a5a29a} td.v{color:#e8e6df;text-align:right}
+ .flag{margin-top:8px;font-size:11px;color:#F0997B;line-height:1.5}
+ .hint{font-size:11px;color:#7d7a72;margin-top:10px;line-height:1.55}
+ .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="ui">
+ <h1>Ennezat crowns &mdash; G_lower_050</h1>
+ <label>Tree</label><select id="tree"></select>
+ <label>Show</label>
+ <div>
+  <button id="bu" class="on">points</button><button id="bm" class="on">alpha shape</button>
+  <button id="be">envelope</button><button id="ba">ALS</button>
+  <button id="bn">neighbours</button><button id="bg" class="on">axes</button>
+ </div>
+ <label>Grown tree &mdash; branches generated into the measured crown</label>
+ <div><button id="w1" class="on">show the tree</button><button id="w2">foliage</button></div>
+ <label>Reconstructed solid &mdash; sections stacked along the hedge</label>
+ <div><button id="q1">from your delineation</button><button id="q2">from the method</button></div>
+ <label>Cross-section &mdash; cut across the hedge</label>
+ <div><button id="bs">slice mode</button>
+ <input id="sl" type="range" min="-600" max="600" value="0" step="12" style="width:100%;margin-top:6px"></div>
+ <canvas id="xs" width="270" height="150" style="margin-top:6px;background:#1b1b15;border:1px solid #33322b;border-radius:4px"></canvas>
+ <div id="xsinfo" style="font-size:11px;color:#7d7a72"></div>
+ <label>Carving check &mdash; your outline against the method</label>
+ <div>
+  <button id="k1">agree</button><button id="k2">method extra</button>
+  <button id="k3">outline missed</button>
+ </div>
+ <label>Envelope form</label><select id="form"></select>
+ <label>View</label>
+ <div><button id="v1">along hedge</button><button id="v2">across hedge</button>
+ <button id="v3">above</button><button id="v0">free</button></div>
+ <table id="info"></table>
+ <div class="flag" id="flags"></div>
+ <div class="hint">
+  <span class="sw" style="background:#5DCAA5"></span>points
+  <span class="sw" style="background:#F0997B"></span>alpha shape
+  <span class="sw" style="background:#7F77DD"></span>envelope<br>
+  <span class="sw" style="background:#8a6a4f"></span>grown tree
+  <span class="sw" style="background:#639922"></span>foliage<br>
+  Solid: <span class="sw" style="background:#F0997B"></span>from your outline
+  <span class="sw" style="background:#7F77DD"></span>from the method<br>
+  Carving: <span class="sw" style="background:#5DCAA5"></span>agree
+  <span class="sw" style="background:#7F77DD"></span>method extra
+  <span class="sw" style="background:#E24B4A"></span>outline missed<br>
+  Drag rotate &middot; scroll zoom &middot; right-drag pan.
+  Red axis along the hedge, blue across it.
+ </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+const D=JSON.parse(document.getElementById('payload').textContent);
+const sc=new THREE.Scene(); sc.background=new THREE.Color(0x14140f);
+const cam=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,2000);
+const rn=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+rn.setSize(innerWidth,innerHeight); rn.setPixelRatio(Math.min(devicePixelRatio,2));
+sc.add(new THREE.AmbientLight(0xffffff,.65));
+const dl=new THREE.DirectionalLight(0xffffff,.75); dl.position.set(8,10,14); sc.add(dl);
+let tgt=new THREE.Vector3(0,0,4),rad=24,th=-1.15,ph=1.15;
+function place(){cam.position.set(tgt.x+rad*Math.sin(ph)*Math.cos(th),tgt.y+rad*Math.sin(ph)*Math.sin(th),tgt.z+rad*Math.cos(ph));cam.up.set(0,0,1);cam.lookAt(tgt);}
+const cv=rn.domElement; let drag=null;
+cv.addEventListener('mousedown',e=>{drag={x:e.clientX,y:e.clientY,b:e.button};e.preventDefault()});
+addEventListener('mouseup',()=>drag=null);
+addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;
+ if(drag.b===2){const s=rad*.0016;const f=new THREE.Vector3().subVectors(tgt,cam.position).normalize();
+  const r=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,0,1)).normalize();
+  const u=new THREE.Vector3().crossVectors(r,f).normalize();
+  tgt.addScaledVector(r,-dx*s);tgt.addScaledVector(u,dy*s);}
+ else{th-=dx*.006;ph=Math.max(.05,Math.min(Math.PI-.05,ph-dy*.006));} place();});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{rad=Math.max(2,Math.min(160,rad*(1+Math.sign(e.deltaY)*.1)));place();e.preventDefault()},{passive:false});
+function pts(a,col,sz){const g=new THREE.BufferGeometry();const p=new Float32Array(a.length*3);
+ for(let i=0;i<a.length;i++){p[i*3]=a[i][0];p[i*3+1]=a[i][1];p[i*3+2]=a[i][2];}
+ g.setAttribute('position',new THREE.BufferAttribute(p,3));
+ return new THREE.Points(g,new THREE.PointsMaterial({color:col,size:sz,sizeAttenuation:true}));}
+const gP=new THREE.Group(),gM=new THREE.Group(),gE=new THREE.Group(),
+      gA=new THREE.Group(),gN=new THREE.Group(),gR=new THREE.Group(),
+      gK1=new THREE.Group(),gK2=new THREE.Group(),gK3=new THREE.Group(),gSL=new THREE.Group(),
+      gQ1=new THREE.Group(),gQ2=new THREE.Group(),gW=new THREE.Group(),gWF=new THREE.Group();
+sc.add(gP,gM,gE,gA,gN,gR,gK1,gK2,gK3,gSL,gQ1,gQ2,gW,gWF);
+function clear(g){while(g.children.length){const c=g.children.pop();if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}}
+const FORMS=["best","box","ellipsoid","half_ellipsoids","cone_up","cone_down","paraboloid_up","paraboloid_down"];
+function factor(form,f,fh){f=Math.min(1,Math.max(0,f));
+ if(form==="box")return 1;
+ if(form==="ellipsoid")return Math.sqrt(Math.max(0,1-(2*f-1)**2));
+ if(form==="half_ellipsoids")return f<=fh?Math.sqrt(Math.max(0,1-((fh-f)/Math.max(fh,1e-6))**2))
+                                          :Math.sqrt(Math.max(0,1-((f-fh)/Math.max(1-fh,1e-6))**2));
+ if(form==="cone_up")return 1-f;
+ if(form==="cone_down")return f;
+ if(form==="paraboloid_up")return Math.sqrt(Math.max(0,1-f));
+ if(form==="paraboloid_down")return Math.sqrt(Math.max(0,f));
+ return 1;}
+function envelope(t,which){const F=t.form; if(!F)return;
+ const form=which==="best"?F.name:which;
+ const rOf=a=>{const cx=Math.cos(a),sy=Math.sin(a);
+   const rx=cx>=0?F.rE:F.rW, ry=sy>=0?F.rN:F.rS;
+   return F.scale/Math.sqrt((cx/rx)**2+(sy/ry)**2);};
+ const NA=48,NZ=16,pos=[];
+ const P=(a,f)=>{const k=factor(form,f,F.fh),r=rOf(a)*k;
+   return [r*Math.cos(a),r*Math.sin(a),F.hcb+(F.htot-F.hcb)*f];};
+ for(let j=0;j<=NZ;j++){const f=j/NZ;
+  for(let i=0;i<NA;i++){const a1=i/NA*Math.PI*2,a2=(i+1)/NA*Math.PI*2;pos.push(...P(a1,f),...P(a2,f));}}
+ for(let i=0;i<NA;i+=4){const a=i/NA*Math.PI*2;
+  for(let j=0;j<NZ;j++)pos.push(...P(a,j/NZ),...P(a,(j+1)/NZ));}
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));
+ gE.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x7F77DD,transparent:true,opacity:.6})));
+ const tg=new THREE.BufferGeometry();
+ tg.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,0,0,0,0,F.hcb]),3));
+ gE.add(new THREE.Line(tg,new THREE.LineBasicMaterial({color:0xD85A30})));}
+function solid(grp,S,col,op){ if(!S)return;
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(S.v),3));
+ g.setIndex(S.f); g.computeVertexNormals();
+ grp.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,transparent:true,
+   opacity:op,side:THREE.DoubleSide,depthWrite:false})));
+ grp.add(new THREE.LineSegments(new THREE.WireframeGeometry(g),
+   new THREE.LineBasicMaterial({color:col,transparent:true,opacity:.12})));}
+function mesh(t){if(!t.mesh)return;
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(t.mesh.v),3));
+ g.setIndex(t.mesh.f); g.computeVertexNormals();
+ gM.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xF0997B,transparent:true,
+   opacity:.5,side:THREE.DoubleSide,depthWrite:false})));
+ gM.add(new THREE.LineSegments(new THREE.WireframeGeometry(g),
+   new THREE.LineBasicMaterial({color:0xD85A30,transparent:true,opacity:.18})));}
+function refs(){const p=[];
+ for(let x=-10;x<=10;x+=2)p.push(x,-5,0,x,5,0);
+ for(let y=-4;y<=4;y+=2)p.push(-10,y,0,10,y,0);
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(p),3));
+ gR.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x2e2e26})));
+ const ax=(v,c)=>{const gg=new THREE.BufferGeometry();
+  gg.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,0,0,...v]),3));
+  gR.add(new THREE.Line(gg,new THREE.LineBasicMaterial({color:c})));};
+ ax([6,0,0],0xE24B4A);ax([0,6,0],0x378ADD);ax([0,0,9],0x97C459);}
+let cur=null;
+function show(g){cur=g;const t=D.trees[g];
+ clear(gP);clear(gM);clear(gE);clear(gA);clear(gN);clear(gK1);clear(gK2);clear(gK3);clear(gSL);clear(gQ1);clear(gQ2);clear(gW);clear(gWF);
+ gP.add(pts(t.uav,0x5DCAA5,.085));
+ if(t.als.length)gA.add(pts(t.als,0xEF9F27,.13));
+ const s0=D.stems[g],nb=[];
+ for(const p of D.context){const dx=p[0]-s0;if(Math.abs(dx)<14)nb.push([dx,p[1],p[2]]);}
+ gN.add(pts(nb,0x55544c,.055));
+ mesh(t); envelope(t,document.getElementById('form').value);
+ if(t.solid){solid(gQ1,t.solid.reference,0xF0997B,.55);solid(gQ2,t.solid.method,0x7F77DD,.45);}
+ if(t.grown){
+   const g2=new THREE.BufferGeometry();
+   g2.setAttribute('position',new THREE.BufferAttribute(new Float32Array(t.grown.v),3));
+   g2.setIndex(t.grown.f); g2.computeVertexNormals();
+   gW.add(new THREE.Mesh(g2,new THREE.MeshLambertMaterial({color:0x8a6a4f,side:THREE.DoubleSide})));
+   gWF.add(pts(t.uav,0x639922,.22));
+ }
+ if(t.carve){
+   if(t.carve.both.length)      gK1.add(pts(t.carve.both,0x5DCAA5,.2));
+   if(t.carve.pred_only.length) gK2.add(pts(t.carve.pred_only,0x7F77DD,.2));
+   if(t.carve.ref_only.length)  gK3.add(pts(t.carve.ref_only,0xE24B4A,.2));
+ }
+ tgt.set(0,0,Math.max(2,t.htot*.45));place();
+ const F=t.form||{};
+ const rows=[['species',t.species],['stratum',t.stratum.replace('_',' ')],
+  ['confidence',t.conf+' %'],['crown F1',t.f1.toFixed(3)],
+  ['best form',F.code||'-'],['form IoU',F.iou!=null?F.iou.toFixed(3):'-'],
+  ['Htot',t.htot.toFixed(2)+' m'],['HCB',t.hcb.toFixed(2)+' m'],
+  ['HLCE',t.hlce.toFixed(2)+' m'],['HLCE position',(F.fh*100).toFixed(0)+' % of crown'],
+  ['r north',t.rad.N.toFixed(2)+' m'],['r east',t.rad.E.toFixed(2)+' m'],
+  ['r south',t.rad.S.toFixed(2)+' m'],['r west',t.rad.W.toFixed(2)+' m'],
+  ['envelope volume',F.vol_form.toFixed(1)+' m3'],['alpha volume',F.vol_alpha.toFixed(1)+' m3'],
+  ['points enclosed',(F.shell_recall*100).toFixed(0)+' %'],
+  ['UAV points',t.n_uav],['ALS points',t.n_als],
+  ['branch segments',t.grown_branches!=null?t.grown_branches:'-'],
+  ['from leaf-off ALS',t.als_nodes!=null?t.als_nodes+' nodes ('+(t.als_frac*100).toFixed(0)+'%)':'-'],
+  ['foliage reached',t.grown_reach!=null?t.grown_reach.toFixed(0)+' %':'-'],
+  ['solid volume',t.solid_vol!=null?t.solid_vol.toFixed(1)+' m3':'-'],
+  ['solid IoU',t.solid_iou!=null?t.solid_iou.toFixed(3):'-'],
+  ['3D carve IoU',t.carve_iou!=null?t.carve_iou.toFixed(3):'-'],
+  ['depth left open',t.carve_depth!=null?t.carve_depth.toFixed(2)+' m of 6':'-']];
+ document.getElementById('info').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td class="v">${r[1]}</td></tr>`).join('');
+ document.getElementById('flags').textContent=t.flags||'';
+ const sl=document.getElementById('sl');
+ let lo=99,hi=-99; for(const p of t.uav){lo=Math.min(lo,p[0]);hi=Math.max(hi,p[0]);}
+ sl.min=Math.round(lo*100); sl.max=Math.round(hi*100); sl.value=0;
+ drawSlice();}
+const HALF=0.125;                      // slice half-thickness, m
+function drawSlice(){
+ const t=D.trees[cur]; if(!t)return;
+ const s=+document.getElementById('sl').value/100;
+ const cv=document.getElementById('xs'),g=cv.getContext('2d');
+ g.clearRect(0,0,cv.width,cv.height);
+ const DMAX=3.2,ZMAX=Math.max(4,t.htot*1.05);
+ const X=d=>cv.width/2+d/DMAX*(cv.width/2-8), Y=z=>cv.height-6-z/ZMAX*(cv.height-14);
+ g.strokeStyle='#33322b';g.lineWidth=1;
+ g.beginPath();g.moveTo(0,Y(0));g.lineTo(cv.width,Y(0));g.stroke();
+ g.beginPath();g.moveTo(X(0),0);g.lineTo(X(0),cv.height);g.stroke();
+ const s0=D.stems[cur];
+ let nctx=0,nt=0;
+ g.fillStyle='#55544c';
+ for(const p of D.context){const ds=p[0]-s0-s;
+   if(Math.abs(ds)<=HALF){g.fillRect(X(p[1])-1,Y(p[2])-1,2,2);nctx++;}}
+ g.fillStyle='#5DCAA5';
+ for(const p of t.uav){if(Math.abs(p[0]-s)<=HALF){g.fillRect(X(p[1])-1.5,Y(p[2])-1.5,3,3);nt++;}}
+ let nc=0,np=0;
+ if(t.carve){
+  g.fillStyle='rgba(127,119,221,.75)';
+  for(const p of t.carve.pred_only){if(Math.abs(p[0]-s)<=HALF){g.fillRect(X(p[1])-2,Y(p[2])-2,4,4);np++;}}
+  g.fillStyle='rgba(93,202,165,.85)';
+  for(const p of t.carve.both){if(Math.abs(p[0]-s)<=HALF){g.fillRect(X(p[1])-2,Y(p[2])-2,4,4);nc++;}}
+  g.fillStyle='rgba(226,75,74,.85)';
+  for(const p of t.carve.ref_only){if(Math.abs(p[0]-s)<=HALF){g.fillRect(X(p[1])-2,Y(p[2])-2,4,4);}}
+ }
+ g.fillStyle='#7d7a72';g.font='10px system-ui';
+ g.fillText('across the hedge, m',4,11); g.fillText('-3',2,cv.height-2); g.fillText('+3',cv.width-14,cv.height-2);
+ document.getElementById('xsinfo').textContent=
+   's = '+s.toFixed(2)+' m from the stem | hedge '+nctx+' pts | this tree '+nt+
+   ' | carved '+nc+' + extra '+np;
+ clear(gSL);
+ const gg=new THREE.BufferGeometry(),q=[];
+ for(const dd of [-3.2,3.2]){q.push(s,dd,0,s,dd,ZMAX);}
+ q.push(s,-3.2,0,s,3.2,0); q.push(s,-3.2,ZMAX,s,3.2,ZMAX);
+ gg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(q),3));
+ gSL.add(new THREE.LineSegments(gg,new THREE.LineBasicMaterial({color:0xFAC775})));
+}
+document.getElementById('sl').oninput=drawSlice;
+const sel=document.getElementById('tree');
+Object.keys(D.trees).sort((a,b)=>a-b).forEach(k=>{const o=document.createElement('option');
+ o.value=k;o.textContent='Tree '+k+'  ('+D.trees[k].species+', '+D.trees[k].conf+'%)';sel.appendChild(o);});
+sel.onchange=()=>show(sel.value);
+const fs=document.getElementById('form');
+FORMS.forEach(f=>{const o=document.createElement('option');o.value=f;
+ o.textContent=f==='best'?'best fit for this tree':f.replace(/_/g,' ');fs.appendChild(o);});
+fs.onchange=()=>{clear(gE);envelope(D.trees[cur],fs.value);};
+function tog(id,grp,on){const b=document.getElementById(id);grp.visible=on;
+ b.classList.toggle('on',on);b.onclick=()=>{grp.visible=!grp.visible;b.classList.toggle('on',grp.visible);};}
+tog('bu',gP,false);tog('bm',gM,false);tog('be',gE,false);tog('ba',gA,false);tog('bn',gN,false);tog('bg',gR,true);
+tog('k1',gK1,false);tog('k2',gK2,false);tog('k3',gK3,false);tog('bs',gSL,true);
+tog('q1',gQ1,false);tog('q2',gQ2,false);tog('w1',gW,true);tog('w2',gWF,false);
+document.getElementById('v1').onclick=()=>{th=-Math.PI/2;ph=Math.PI/2;place();};
+document.getElementById('v2').onclick=()=>{th=0;ph=Math.PI/2;place();};
+document.getElementById('v3').onclick=()=>{ph=.06;th=-Math.PI/2;place();};
+document.getElementById('v0').onclick=()=>{th=-1.15;ph=1.15;place();};
+refs();show(Object.keys(D.trees).sort((a,b)=>a-b)[0]);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();rn.setSize(innerWidth,innerHeight);});
+(function loop(){requestAnimationFrame(loop);rn.render(sc,cam);})();
+</script></body></html>

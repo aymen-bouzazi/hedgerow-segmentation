@@ -1,0 +1,11 @@
+{
+  "_comment": "Local paths only. Copy to preparation.json and fill in paths outside the public repository.",
+  "work_dir": "private/preparation_work",
+  "als_raw": "private/raw/als.laz",
+  "uav_raw": "private/raw/uav.laz",
+  "stems_offset_gpkg": "private/inventory_corrected.gpkg",
+  "inventory_clean_gpkg": "data/source/inventory/ennezat_inventory_full_clean.gpkg",
+  "hedge_outline_gpkg": "data/source/clouds/ennezat_hedge_outline.gpkg",
+  "camera_stations_csv": "data/source/cameras/camera_stations.csv",
+  "export_dir": "private/export"
+}

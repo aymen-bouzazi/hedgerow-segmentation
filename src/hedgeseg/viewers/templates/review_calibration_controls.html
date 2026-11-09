@@ -1,0 +1,10 @@
+<section><h3 style="font-size:14px">Camera calibration</h3>
+<p class="hint">Base observations and seasonal pairs are editable measurements. Fitting changes camera angles only; the supplied camera centre, approximate height and focal length stay fixed. No cloud or tree coordinates are shifted.</p>
+<button id="fitBases" class="wide">Preview fit from this photo’s bases</button>
+<button id="fitTies" class="wide">Preview seasonal fit from saved pairs</button>
+<p id="fitStatus" class="notice">No proposed fit. Existing cameras are retained.</p>
+<div class="row"><button id="applyCamera" disabled>Apply preview</button><button id="rejectCamera" disabled>Reject preview</button></div>
+<button id="resetCamera" class="wide">Restore supplied camera for this photo</button>
+<p class="hint">At least 3 correctly identified controls are required; use more, spread across the frame. Hidden or guessed bases receive lower weight. All-base controls cannot independently determine camera height or focal length. Editing observations alone does not recalibrate.</p>
+<details><summary>What is saved, and what changes?</summary><p>Applied camera revisions are included in the review JSON together with bases, feature pairs and outlines. An outline stays in its original photo pixels. Recalibration changes the projected cloud, so evaluation must be rerun using the exported cameras. Existing numerical scores are not silently recomputed.</p><p>Seasonal rotation transfer assumes nearly the same camera position. Parallax from a moved tripod cannot be removed reliably by rotating the image. Judge the alignment at several heights and positions.</p></details>
+</section><section><label>Point inspection</label><pre id="pointInfo" style="white-space:pre-wrap;font-size:11px">Choose “Inspect point XYZ / depth”, enable a cloud layer and click a point. Depth is distance along the camera axis, not a new depth measurement from the photo.</pre></section>

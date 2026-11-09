@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hedgeseg"
+version = "0.1.0"
+description = "Assigning airborne laser and UAV photogrammetry points to surveyed hedgerow trees, with photographic evaluation and crown-structure extraction (Ennezat hedgerow, France)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Aymen Bouzazi" }]
+keywords = ["lidar", "photogrammetry", "hedgerow", "individual tree segmentation", "forestry", "remote sensing"]
+dependencies = [
+  "numpy>=2.0,<3", "pandas>=2.2,<3", "scipy>=1.13,<2", "scikit-image>=0.24", "matplotlib>=3.8",
+  "Pillow>=10", "laspy>=2.5", "lazrs>=0.6", "shapely>=2.0", "geopandas>=1.0", "pyogrio>=0.9", "pyproj>=3.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hedgeseg = ["viewers/templates/*", "viewers/templates/vendor/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["preparation"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501", "E731", "E741", "E702", "E701"]
